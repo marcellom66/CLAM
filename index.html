@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="it" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>CLAM Dashboard - The Cognitive Architect</title>
+    <!-- Tailwind per il design premium come richiesto -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Rimossa Vis.js in favore dell'interfaccia testuale -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { accent: '#3B82F6', semantic: '#10B981', episodic: '#8B5CF6' },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0B0F19;
+            color: #E5E7EB;
+        }
+
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            align-content: start;
+            overflow-y: auto;
+        }
+
+        .glass {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .log-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-scroll::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-6 font-sans">
+
+    <header class="mb-8 border-b border-gray-800 pb-4">
+        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+            CLAM Dashboard
+        </h1>
+        <p class="text-gray-400 text-sm mt-1">CLAM OS Memory Stream & Vis</p>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Chat e Log -->
+        <section class="col-span-1 space-y-6">
+            <div class="glass p-5 rounded-xl border border-gray-800 shadow-xl">
+                <h2 class="text-lg font-semibold text-white mb-3">Live Interactor</h2>
+                <div id="chat-history" class="h-48 overflow-y-auto mb-3 space-y-2 log-scroll text-sm"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="chat-input"
+                        class="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-accent"
+                        placeholder="Insegna qualcosa a CLAM...">
+                    <button onclick="sendMessage()"
+                        class="bg-accent hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium">Tx</button>
+                    <button onclick="clearChat()" title="Pulisci Chat"
+                        class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg font-medium transition-colors">🧹</button>
+                    <button onclick="clearMemory()" title="Svuota Memoria dell'Agente"
+                        class="bg-red-900/40 hover:bg-red-600 text-red-500 hover:text-white border border-red-800 hover:border-red-600 px-3 py-2 rounded-lg font-medium transition-all">🧠🧨</button>
+                    <button onclick="resetAndSeed()" title="Reset + Ri-carica Seed"
+                        class="bg-yellow-900/40 hover:bg-yellow-600 text-yellow-500 hover:text-white border border-yellow-800 hover:border-yellow-600 px-3 py-2 rounded-lg font-medium transition-all">🌱</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div class="glass p-4 rounded-xl border border-gray-800 text-center">
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">Volatile Nodes</div>
+                    <div id="stat-volatile" class="text-2xl font-bold text-accent mt-1 animate-pulse-slow">0</div>
+                </div>
+                <!-- Statistica Long Term (Ora mostra dati reali) -->
+                <div class="glass p-4 rounded-xl border border-gray-800 text-center">
+                    <div class="text-xs text-gray-400 uppercase tracking-wider">Semantic DB</div>
+                    <div id="stat-semantic" class="text-2xl font-bold text-semantic mt-1">0</div>
+                </div>
+                <!-- Statistica Graph DB -->
+                <div class="glass p-4 rounded-xl border border-gray-800 text-center">
+                    <div class="text-xs text-yellow-400 uppercase tracking-wider">Graph Logic</div>
+                    <div id="stat-graph" class="text-2xl font-bold text-yellow-500 mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- Knowledge Document Preview -->
+            <div class="glass p-5 rounded-xl border border-yellow-800/50 shadow-xl flex flex-col">
+                <h2 class="text-lg font-semibold text-yellow-400 mb-3 flex justify-between items-center">
+                    📋 Knowledge Document (come lo vede l'LLM)
+                    <button onclick="refreshKnowledgeDoc()" title="Aggiorna Preview"
+                        class="text-xs bg-yellow-900/40 text-yellow-400 hover:bg-yellow-700 px-2 py-1 rounded transition-colors">🔄
+                        Refresh</button>
+                </h2>
+                <div id="knowledge-doc-preview"
+                    class="flex-1 font-mono text-xs text-yellow-200/80 bg-gray-900 border border-yellow-900/30 p-3 rounded whitespace-pre-wrap log-scroll overflow-y-auto max-h-[200px]">
+                    Caricamento...</div>
+                <!-- Form per aggiungere triple manualmente -->
+                <div class="mt-3 flex gap-2 flex-wrap">
+                    <select id="triple-subject"
+                        class="bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1">
+                        <option value="Utente">Utente</option>
+                        <option value="CLAM">CLAM</option>
+                    </select>
+                    <select id="triple-predicate"
+                        class="bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1 flex-shrink-0">
+                        <option value="ha_nome">ha_nome</option>
+                        <option value="ha_eta">ha_eta</option>
+                        <option value="ha_lavoro">ha_lavoro</option>
+                        <option value="vive_a">vive_a</option>
+                        <option value="nazionalita">nazionalità</option>
+                        <option value="preferisce_colore">preferisce_colore</option>
+                        <option value="preferisce_animale">preferisce_animale</option>
+                        <option value="preferisce_cibo">preferisce_cibo</option>
+                        <option value="preferisce_musica">preferisce_musica</option>
+                        <option value="hobby">hobby</option>
+                        <option value="ha_visitato">ha_visitato</option>
+                        <option value="usa_tecnologia">usa_tecnologia</option>
+                        <option value="sa_fare">sa_fare</option>
+                        <option value="fatto_generico">fatto_generico</option>
+                        <option value="è">è (identità CLAM)</option>
+                        <option value="ha_imparato">ha_imparato</option>
+                    </select>
+                    <input type="text" id="triple-object" placeholder="Valore..."
+                        class="flex-1 bg-gray-900 border border-gray-700 text-white text-xs rounded px-2 py-1 min-w-[120px]">
+                    <button onclick="addTriple()"
+                        class="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-1 rounded text-xs font-bold transition-colors">+
+                        Aggiungi</button>
+                </div>
+            </div>
+
+            <!-- Stream of Consciousness Log -->
+            <div class="glass p-5 rounded-xl border border-gray-800 shadow-xl h-48 flex flex-col">
+                <h2 class="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Memory Engine Terminal
+                </h2>
+                <div id="consciousness-log"
+                    class="flex-1 overflow-y-auto font-mono text-xs text-green-400 space-y-1 log-scroll">
+                    <div>[Init] Moduli Concorrenti in Ascolto...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Memory Testuale -->
+        <section class="col-span-2 grid grid-rows-3 gap-6 h-full">
+            <!-- Short Term Memory (RAM) -->
+            <div
+                class="glass p-5 rounded-xl border border-gray-800 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
+                <h2 class="text-lg font-semibold text-white mb-3 flex justify-between items-center">
+                    Buffer Cognitivo (Subconscio / RAM)
+                    <span class="text-xs bg-gray-800 text-gray-300 px-2 py-1 rounded">TCP WS: <span id="ws-status"
+                            class="text-yellow-400">Conn...</span></span>
+                </h2>
+                <div id="stm-grid" class="memory-grid flex-1 border border-gray-700 p-2 rounded bg-gray-900 log-scroll">
+                    <!-- Cards STM dinamiche qui -->
+                    <div class="text-gray-500 text-sm mt-2 ml-2">In ascolto per nuove ipotesi...</div>
+                </div>
+            </div>
+
+            <!-- Long Term Memory (Semantic DB) -->
+            <div
+                class="glass p-5 rounded-xl border border-gray-800 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
+                <h2 class="text-lg font-semibold text-white mb-3 flex justify-between items-center text-semantic">
+                    Conoscenza Consolidata (Fatti Appresi)
+                </h2>
+                <div id="ltm-grid" class="memory-grid flex-1 border border-gray-700 p-2 rounded bg-gray-900 log-scroll">
+                    <!-- Cards LTM dinamiche qui -->
+                    <div class="text-gray-500 text-sm mt-2 ml-2">Database interrogato...</div>
+                </div>
+            </div>
+
+            <!-- Knowledge Graph (Triple Store) -->
+            <div
+                class="glass p-5 rounded-xl border border-gray-800 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
+                <h2 class="text-lg font-semibold text-white mb-3 flex justify-between items-center text-yellow-400">
+                    Verità Assolute (Knowledge Graph)
+                </h2>
+                <div id="graph-grid"
+                    class="memory-grid flex-1 border border-gray-700 p-2 rounded bg-gray-900 log-scroll">
+                    <div class="text-gray-500 text-sm mt-2 ml-2">In attesa di stabilire verità incontrovertibili...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const chatInput = document.getElementById('chat-input'), chatHistory = document.getElementById('chat-history');
+
+        // Ripristina la chat dal localStorage al caricamento della pagina
+        // Così i messaggi sopravvivono ai refresh causati da uvicorn --reload
+        const savedChat = localStorage.getItem('clam_chat_history');
+        if (savedChat) chatHistory.innerHTML = savedChat;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        function saveChat() { localStorage.setItem('clam_chat_history', chatHistory.innerHTML); }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim(); if (!text) return;
+            chatInput.value = '';
+            chatHistory.innerHTML += `<div class="text-accent text-right mb-1 items-center gap-1 justify-end flex">Tu: ${text} <span class="text-lg">🧔🏻‍♂️</span></div>`;
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            saveChat();
+            try {
+                const res = await fetch('http://localhost:8000/api/chat', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                chatHistory.innerHTML += `<div class="text-gray-300 bg-gray-800 p-2 rounded w-fit mt-1 shadow flex items-center gap-2"><span class="text-xl">🧒🏻</span> <b>CLAM:</b> ${data.reply}</div>`;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+                saveChat();
+            } catch (err) { console.error(err); }
+        }
+        chatInput.addEventListener("keyup", e => e.key === "Enter" && sendMessage());
+        function clearChat() { chatHistory.innerHTML = ''; localStorage.removeItem('clam_chat_history'); }
+
+        async function clearMemory() {
+            if (!confirm("ATTENZIONE: Stai per cancellare definitivamente tutta la memoria di CLAM (sia a breve che a lungo termine). Sei sicuro di voler procedere?")) {
+                return;
+            }
+            try {
+                const res = await fetch('http://localhost:8000/api/memory', { method: 'DELETE' });
+                if (res.ok) {
+                    // Feedback visuale immediato
+                    document.getElementById('stm-grid').innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Memoria formattata... In attesa di nuovi stimoli.</div>';
+                    document.getElementById('ltm-grid').innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Database vuoto...</div>';
+                    document.getElementById('graph-grid').innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Grafo relazionale resettato.</div>';
+                    document.getElementById('consciousness-log').innerHTML += '<div>[Sistema] 🧨 Memoria globale azzerata dall\'utente.</div>';
+                    document.getElementById('stat-volatile').textContent = "0";
+                    document.getElementById('stat-semantic').textContent = "0";
+                    document.getElementById('stat-graph').textContent = "0";
+                    seenNodes.clear(); // Resetta i nodi visti localmente
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function resetAndSeed() {
+            if (!confirm("ATTENZIONE: Questo cancellerà TUTTA la memoria e ricaricherà solo i fatti dal file seed_truths.yaml. Procedere?")) return;
+            try {
+                const res = await fetch('http://localhost:8000/api/knowledge/reset-and-seed', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('consciousness-log').innerHTML += `<div>[Sistema] 🌱 Reset + Seed completato: ${data.loaded} fatti caricati</div>`;
+                    refreshKnowledgeDoc();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function refreshKnowledgeDoc() {
+            try {
+                const res = await fetch('http://localhost:8000/api/knowledge/document');
+                const data = await res.json();
+                document.getElementById('knowledge-doc-preview').textContent = data.document || 'Nessun fatto registrato.';
+            } catch (err) {
+                document.getElementById('knowledge-doc-preview').textContent = 'Errore di connessione al server.';
+            }
+        }
+
+        async function addTriple() {
+            const subject = document.getElementById('triple-subject').value;
+            const predicate = document.getElementById('triple-predicate').value;
+            const object_ = document.getElementById('triple-object').value.trim();
+            if (!object_) { alert('Inserisci un valore!'); return; }
+            try {
+                const res = await fetch('http://localhost:8000/api/knowledge/triple', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject, predicate, object_ })
+                });
+                if (res.ok) {
+                    document.getElementById('triple-object').value = '';
+                    document.getElementById('consciousness-log').innerHTML += `<div>[Knowledge] ➕ Aggiunto: ${subject} → ${predicate} → ${object_}</div>`;
+                    refreshKnowledgeDoc();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        // Carica il Knowledge Document all'avvio
+        setTimeout(refreshKnowledgeDoc, 1000);
+
+        // Stato dei nodi per i log a schermo
+        let seenNodes = new Set();
+        let ws;
+
+        async function deleteMemoryItem(store, id) {
+            if (!confirm(`ATTENZIONE: Stai per cancellare definitivamente questo frammento di memoria. Procedere?`)) return;
+            try {
+                const res = await fetch(`http://localhost:8000/api/memory/item/${store}/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    document.getElementById('consciousness-log').innerHTML += `<div>[Sistema] 🗑️ Ricordo rimosso chirurgicamente (${store}).</div>`;
+                    // L'UI si aggiornerà al prossimo resync WS generato dal ciclo in background o dalla prossima iterazione
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderCard(id, title, description, score, store) {
+            let borderColor = 'border-blue-500', bgColor = 'bg-blue-900/30', colorTxt = 'text-blue-400';
+            const isLTM = store === 'ltm';
+            if (score >= 3 || isLTM) { borderColor = 'border-emerald-500'; bgColor = 'bg-emerald-900/30'; colorTxt = 'text-emerald-400'; }
+            if (score <= -1 && !isLTM) { borderColor = 'border-gray-500'; bgColor = 'bg-gray-800'; colorTxt = 'text-gray-400'; }
+
+            const displayScore = isLTM ? 'Fatto Consolidato' : `Score: ${score}`;
+            const shortTitle = title.length > 30 ? title.substring(0, 30) + '...' : title;
+
+            return `
+                <div class="border ${borderColor} ${bgColor} p-3 rounded shadow-sm text-sm flex flex-col group relative">
+                    <button onclick="deleteMemoryItem('${store}', '${id}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-gray-500 hover:text-red-500 cursor-pointer" title="Cancella Memoria">🗑️</button>
+                    <div class="font-bold text-gray-200 mb-1 leading-tight pr-6" title="${title}">
+                        ${shortTitle}
+                    </div>
+                    <div class="text-xs text-gray-400 leading-relaxed mb-2">${description}</div>
+                    <div class="text-[10px] ${colorTxt} uppercase tracking-wide font-semibold mt-auto">${displayScore}</div>
+                </div>
+            `;
+        }
+
+        function connectWS() {
+            const wsStatus = document.getElementById('ws-status');
+            ws = new WebSocket("ws://localhost:8000/ws");
+
+            ws.onopen = () => {
+                wsStatus.textContent = "Online";
+                wsStatus.className = "text-green-400 font-bold";
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'telemetry') {
+                    // Update stats
+                    document.getElementById('stat-volatile').textContent = data.stm_count;
+                    if (data.ltm_count !== undefined) {
+                        document.getElementById('stat-semantic').textContent = data.ltm_count;
+                    }
+
+                    // Render STM
+                    const stmGrid = document.getElementById('stm-grid');
+                    if (data.nodes.length > 0) {
+                        stmGrid.innerHTML = data.nodes.map(n => renderCard(n.id_concetto, n.id_concetto.replace('concept_', ''), n.descrizione, n.confidence_score, 'stm')).join('');
+                    } else {
+                        stmGrid.innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Vuoto (Nessun concetto processato)</div>';
+                    }
+
+                    // Check for new STM nodes to append to log
+                    data.nodes.forEach(n => {
+                        if (!seenNodes.has(n.id_concetto)) {
+                            seenNodes.add(n.id_concetto);
+                            const label = n.descrizione.length > 40 ? n.descrizione.substring(0, 40) + '...' : n.descrizione;
+                            const logBox = document.getElementById('consciousness-log');
+                            logBox.innerHTML += `<div>[Buffer] Nuova Ipotesi: ${label}</div>`;
+                            logBox.scrollTop = logBox.scrollHeight;
+                        }
+                    });
+
+                    // Render LTM
+                    if (data.ltm_data && data.ltm_data.ids) {
+                        const ltmGrid = document.getElementById('ltm-grid');
+                        let ltmHtml = '';
+                        for (let i = 0; i < data.ltm_data.ids.length; i++) {
+                            const id = data.ltm_data.ids[i];
+                            const docs = data.ltm_data.documents;
+                            if (docs && docs.length > i) {
+                                ltmHtml += renderCard(id, id.replace('concept_', ''), docs[i], 0, 'ltm');
+                            }
+                        }
+                        if (ltmHtml !== '') {
+                            ltmGrid.innerHTML = ltmHtml;
+                        } else {
+                            ltmGrid.innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Nessun fatto consolidato nel DB</div>';
+                        }
+                    }
+
+                    // Render GraphDB
+                    if (data.graph_count !== undefined) {
+                        document.getElementById('stat-graph').textContent = data.graph_count;
+                        const graphGrid = document.getElementById('graph-grid');
+                        if (data.triples && data.triples.length > 0) {
+                            graphGrid.innerHTML = data.triples.map(t =>
+                                `<div class="border border-yellow-500 bg-yellow-900/30 p-3 rounded shadow-sm text-sm flex flex-col items-center justify-center text-center group relative">
+                                    <button onclick="deleteMemoryItem('graph', '${t.id_tripla}')" class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-yellow-600 hover:text-red-500 cursor-pointer" title="Cancella Memoria">🗑️</button>
+                                    <div class="text-xs text-gray-400">SOGGETTO</div>
+                                    <div class="font-bold text-gray-200 uppercase tracking-wide px-4">${t.subject}</div>
+                                    <div class="text-yellow-400 my-1 font-mono text-[10px] uppercase font-bold tracking-widest px-2 py-1 bg-yellow-900/50 rounded-full w-full">→ ${t.predicate} →</div>
+                                    <div class="font-bold text-white uppercase tracking-wide px-4">${t.object_}</div>
+                                 </div>`
+                            ).join('');
+                        } else {
+                            graphGrid.innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Nessuna verità matematica stabilita.</div>';
+                        }
+                    }
+                } else if (data.type === 'console_log') {
+                    console.log("%c[CLAM-Core]%c " + data.message, "color: #10B981; font-weight: bold", "color: inherit");
+                }
+            };
+
+            ws.onclose = () => {
+                wsStatus.textContent = "Offline (Reconnecting...)";
+                wsStatus.className = "text-red-500 animate-pulse";
+                setTimeout(connectWS, 2000); // Riconnessione automatica ogni 2s
+            };
+
+            ws.onerror = (err) => {
+                ws.close();
+            };
+        }
+        connectWS();
+    </script>
+</body>
+
+</html>

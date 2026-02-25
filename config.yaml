@@ -1,0 +1,24 @@
+# Configurazione di Base dell'Agente Cognitivo CLAM
+# Tutte le costanti critiche risiedono qui per non avere "magic numbers" nel codice.
+
+llm:
+  provider: "ollama"
+  model: "qwen2.5:3b"
+  base_url: "http://localhost:11434"
+  temperature: 0.2 # Mantenuta bassa per favorire la logica ed evitare allucinazioni nei motori interni
+
+memory:
+  short_term:
+    promotion_threshold: 1      # Abbassato da 3 a 1: con qwen2.5:3b il Critic è troppo instabile per score alti
+    decay_time_minutes: 60      # Minuti di inattività prima che il nodo rischi la cancellazione
+    min_score: -2               # Se il punteggio scende a questo limite e il timeout scade, il nodo viene dimenticato
+  long_term:
+    provider: "chromadb"
+    path: "./data/chroma"       # Path relativo dove ChromaDB salverà i tensori su disco
+    semantic_collection: "clam_semantic_memory"
+    episodic_collection: "clam_episodic_memory"
+    graph_db: "./data/graph.sqlite" # Database relazionale SQLite locale per i fatti matematici
+
+api:
+  host: "127.0.0.1"
+  port: 8000

@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────────
+# SEED TRUTHS - Fatti fondamentali pre-caricati all'avvio di CLAM
+# ─────────────────────────────────────────────────────────────────
+# Questi fatti vengono caricati nel GraphDB al primo avvio
+# o dopo un reset totale della memoria.
+# Marcello può editare questo file per personalizzare l'identità
+# senza dover ri-insegnare tutto da zero all'LLM.
+#
+# FORMATO: Ogni tripla ha subject, predicate, object.
+# I predicati DEVONO essere quelli definiti in knowledge_schema.py:
+#   ha_nome, ha_eta, ha_lavoro, vive_a, nazionalita,
+#   preferisce_colore, preferisce_animale, preferisce_cibo, hobby,
+#   ha_visitato, usa_tecnologia, sa_fare, fatto_generico,
+#   è, ha_imparato
+# ─────────────────────────────────────────────────────────────────
+
+seed_truths:
+  # ── CHI È L'UTENTE ──
+  - subject: "Utente"
+    predicate: "ha_nome"
+    object: "Marcello Mangione"
+
+  - subject: "Utente"
+    predicate: "ha_lavoro"
+    object: "Elettronica Mangione - R&D Hardware/Embedded"
+
+  # ── TECNOLOGIA ──
+  - subject: "Utente"
+    predicate: "usa_tecnologia"
+    object: "ESP32 per progetti embedded"
+
+  # ── CHI È CLAM ──
+  - subject: "CLAM"
+    predicate: "è"
+    object: "un'intelligenza artificiale con la personalità di un bambino robot di 6 anni"
