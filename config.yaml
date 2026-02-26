@@ -1,6 +1,12 @@
 # Configurazione di Base dell'Agente Cognitivo CLAM
 # Tutte le costanti critiche risiedono qui per non avere "magic numbers" nel codice.
 
+# ── LANGUAGE ─────────────────────────────────────────────────────────
+# Language for the UI, LLM prompts and knowledge labels.
+# Supported values: it, en, de, fr, es
+# Fallback: en
+language: "en"
+
 llm:
   provider: "ollama"
   model: "qwen2.5:3b"

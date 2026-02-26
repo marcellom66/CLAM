@@ -18,6 +18,7 @@ from clam.core.models import LogicalTriple
 from clam.core.knowledge_schema import (
     KNOWLEDGE_CATEGORIES,
     normalize_predicate,
+    get_localized_categories,
 )
 
 
@@ -28,27 +29,34 @@ class KnowledgeRenderer:
     della vecchia lista piatta di triple.
     """
 
-    async def render_knowledge_document(self, graph_db: GraphDB) -> str:
+    async def render_knowledge_document(self, graph_db: GraphDB, lang: str = None) -> str:
         """
-        Pipeline completa: legge tutte le triple, le normalizza,
-        le organizza per categorie e genera il documento in linguaggio naturale.
+        Full pipeline: reads all triples, normalises them,
+        organises them by category and generates the natural-language document.
+
+        Args:
+            graph_db: the graph database to read from.
+            lang: language code for labels (e.g. 'en', 'it'). If None, uses CONFIG.language.
 
         Returns:
-            Stringa vuota se non ci sono fatti, altrimenti il documento strutturato.
+            Empty string if no facts, otherwise the structured document.
         """
         all_triples: List[LogicalTriple] = await graph_db.get_all_triples()
 
         if not all_triples:
             return ""
 
-        # 1. Normalizza i predicati e de-duplica per contenuto semantico
+        # Fetch the category dict with localised labels for the requested language
+        localized_categories: Dict[str, dict] = get_localized_categories(lang)
+
+        # 1. Normalise predicates and deduplicate by semantic content
         normalized: List[LogicalTriple] = self._normalize_and_deduplicate(all_triples)
 
-        # 2. Raggruppa per categoria ontologica
-        categorized: Dict[str, List[LogicalTriple]] = self._categorize_triples(normalized)
+        # 2. Group by ontological category
+        categorized: Dict[str, List[LogicalTriple]] = self._categorize_triples(normalized, localized_categories)
 
-        # 3. Renderizza in formato documento naturale
-        document: str = self._render_document(categorized)
+        # 3. Render into natural-language document
+        document: str = self._render_document(categorized, localized_categories)
 
         return document
 
@@ -88,26 +96,24 @@ class KnowledgeRenderer:
         return list(best_triples.values())
 
     def _categorize_triples(
-        self, triples: List[LogicalTriple]
+        self, triples: List[LogicalTriple], categories: Dict[str, dict]
     ) -> Dict[str, List[LogicalTriple]]:
         """
-        Smista ogni tripla nella categoria ontologica giusta
-        basandosi su (entity del soggetto + predicato).
-        Le triple orfane (predicato non riconosciuto) finiscono in 'esperienze_utente'.
+        Routes each triple into the correct ontological category
+        based on (entity of subject + predicate).
+        Orphan triples (unrecognised predicate) fall into 'esperienze_utente'.
         """
         categorized: Dict[str, List[LogicalTriple]] = {
-            cat_name: [] for cat_name in KNOWLEDGE_CATEGORIES
+            cat_name: [] for cat_name in categories
         }
 
         for triple in triples:
             placed: bool = False
             subject_lower: str = triple.subject.strip().lower()
 
-            for cat_name, cat_data in KNOWLEDGE_CATEGORIES.items():
+            for cat_name, cat_data in categories.items():
                 entity_lower: str = cat_data["entity"].lower()
 
-                # Match: il soggetto corrisponde all'entità della categoria
-                # E il predicato è tra quelli ammessi
                 if (
                     subject_lower == entity_lower
                     and triple.predicate in cat_data["predicates"]
@@ -116,25 +122,23 @@ class KnowledgeRenderer:
                     placed = True
                     break
 
-            # Fallback: le triple non classificate vanno nelle esperienze
             if not placed:
                 categorized["esperienze_utente"].append(triple)
 
         return categorized
 
     def _render_document(
-        self, categorized: Dict[str, List[LogicalTriple]]
+        self, categorized: Dict[str, List[LogicalTriple]], categories: Dict[str, dict]
     ) -> str:
         """
-        Genera il documento finale in linguaggio naturale strutturato.
+        Generates the final document in structured natural language.
 
-        Le categorie 'identità' e 'preferenze' vengono renderizzate
-        come key-value (Nome: Marcello).
-        Le categorie 'esperienze' vengono renderizzate come lista puntata.
+        'identity' and 'preference' categories are rendered as key-value pairs
+        (e.g. Name: Marcello), while 'experiences' are rendered as bullet lists.
         """
         sections: List[str] = []
 
-        for cat_name, cat_data in KNOWLEDGE_CATEGORIES.items():
+        for cat_name, cat_data in categories.items():
             triples: List[LogicalTriple] = categorized.get(cat_name, [])
 
             if not triples:
@@ -143,9 +147,8 @@ class KnowledgeRenderer:
             render_labels: Dict[str, str] = cat_data.get("render_labels", {})
             label: str = cat_data["label"]
 
-            # Distinguiamo tra categorie "key-value" e categorie "lista"
             if cat_name in ("esperienze_utente",):
-                # Formato lista puntata per le esperienze
+                # Bullet list format for experiences
                 lines: List[str] = [f"{label}:"]
                 for t in triples:
                     prefix: str = render_labels.get(t.predicate, "")
@@ -155,9 +158,8 @@ class KnowledgeRenderer:
                         lines.append(f"  - {t.object_}")
                 sections.append("\n".join(lines))
             else:
-                # Formato key-value per identità e preferenze
+                # Key-value format for identity and preferences
                 lines = [f"{label}:"]
-                # Raggruppa per predicato per evitare duplicati visivi
                 seen_predicates: Set[str] = set()
                 for t in triples:
                     if t.predicate in seen_predicates:

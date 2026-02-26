@@ -32,6 +32,8 @@ class ClamConfig(BaseModel):
     llm: LLMConfig
     memory: MemoryConfig
     api: APIConfig
+    # Language code for UI & LLM prompts. Default: 'en' so old config files still work.
+    language: str = "en"
 
 def load_config(config_path: str) -> ClamConfig:
     """

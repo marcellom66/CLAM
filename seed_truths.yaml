@@ -29,7 +29,10 @@ seed_truths:
     predicate: "usa_tecnologia"
     object: "ESP32 per progetti embedded"
 
-  # ── CHI È CLAM ──
+  # ── WHO IS CLAM ──
+  # NB: This value is stored as an internal graph fact and must be LANGUAGE-NEUTRAL
+  # (English). The LLM system prompt (built from locales.py) will adapt the
+  # presentation to the configured language at runtime.
   - subject: "CLAM"
     predicate: "è"
-    object: "un'intelligenza artificiale con la personalità di un bambino robot di 6 anni"
+    object: "an artificial intelligence with the personality of a 6-year-old robot child"

@@ -3,6 +3,7 @@ import os
 import yaml
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
 import uvicorn
@@ -276,3 +277,11 @@ def start_server():
 
 if __name__ == "__main__":
     start_server()
+
+# ─────────────────────────────────────────────────────────────────
+# MOUNT STATIC FILES — deve stare DOPO tutte le route API/WebSocket.
+# StaticFiles con html=True serve index.html automaticamente su GET /.
+# La directory puntata è la root del progetto (dove vive index.html).
+# Se messo prima delle route API, FastAPI non raggiungerebbe mai /api/*.
+# ─────────────────────────────────────────────────────────────────
+app.mount("/", StaticFiles(directory=_PROJECT_ROOT, html=True), name="frontend")

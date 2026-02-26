@@ -5,39 +5,12 @@ from clam.memory.long_term import LongTermMemory
 from clam.memory.graph_db import GraphDB
 from clam.core.models import MemoryNode, VectorDBNode, LogicalTriple
 from clam.core.knowledge_schema import normalize_predicate, get_allowed_predicates_prompt
+from clam.core.locales import get_inference_prompt
+from clam.config import CONFIG
 
-# ─────────────────────────────────────────────────────────────────────
-# PROMPT con predicati controllati dall'ontologia
-# L'LLM DEVE usare SOLO i predicati ammessi nel campo "predicate"
-# delle triple_logiche. Altrimenti il KnowledgeRenderer non sa dove metterle.
-# ─────────────────────────────────────────────────────────────────────
-INFERENCE_SYSTEM_PROMPT = """
-Sei il Percettore di un'architettura cognitiva (CLAM). La tua missione è IMPARARE dall'Utente umano.
-Analizza SOLO ciò che l'Utente (l'umano) ha detto esplicitamente.
-Devi restituire ESCLUSIVAMENTE un JSON con tre chiavi:
-1. "concetti": Array di stringhe con fatti generali sull'Utente (max 2). Array vuoto se nessuno.
-2. "triple_logiche": Array di oggetti SOLO per fatti ESPLICITI detti dall'Utente su di sé.
-3. "triple_logiche_da_cancellare": Array di oggetti smentiti dall'utente.
-
-PREDICATI AMMESSI (usa SOLO questi nel campo "predicate"):
-{allowed_predicates}
-
-REGOLE RIGIDISSIME:
-- Il campo "subject" deve essere SEMPRE "Utente". MAI "CLAM".
-- Salva SOLO fatti che l'Utente ha detto ESPLICITAMENTE su di sé (es. "mi chiamo...", "mi piace...", "ho...").
-- NON salvare MAI opinioni, battute o preferenze espresse da CLAM (l'agente). CLAM non ha preferenze.
-- NON inventare fatti. Se l'Utente non ha detto nulla di nuovo, restituisci array vuoti.
-- NON COPIARE L'ESEMPIO. Se non ci sono fatti nuovi, restituisci {{"concetti": [], "triple_logiche": [], "triple_logiche_da_cancellare": []}}.
-
-Esempio Formato JSON (USA SOLO COME STRUTTURA):
-{{
-  "concetti": [],
-  "triple_logiche": [
-    {{"subject": "Utente", "predicate": "ha_nome", "object": "Mario Rossi"}}
-  ],
-  "triple_logiche_da_cancellare": []
-}}
-"""
+# The inference system prompt is built lazily at runtime from locales.py
+# so it matches the language set in config.yaml.
+# The {allowed_predicates} placeholder is filled by get_allowed_predicates_prompt().
 
 
 class InferenceEngine:
@@ -94,8 +67,10 @@ class InferenceEngine:
             truths = "\n".join([f"- {t.subject} -> {t.predicate} -> {t.object_}" for t in all_triples])
             logical_truths = f"\n[VERITÀ ATTUALI NEL DB]\n{truths}\n(Se l'Utente smentisce o corregge una di queste verità, copiala ESATTAMENTE in 'triple_logiche_da_cancellare')\n"
 
-        # Iniettiamo la lista dei predicati ammessi nel prompt di sistema
-        system_prompt_with_predicates = INFERENCE_SYSTEM_PROMPT.format(
+        # Build the inference prompt in the configured language,
+        # then inject the controlled predicate list from the ontology schema.
+        inference_prompt_template: str = get_inference_prompt(CONFIG.language)
+        system_prompt_with_predicates = inference_prompt_template.format(
             allowed_predicates=get_allowed_predicates_prompt()
         )
 

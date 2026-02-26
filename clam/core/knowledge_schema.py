@@ -7,80 +7,79 @@ L'Inference Engine DEVE usare solo i predicati definiti qui.
 
 Principio: un LLM da 3B parametri capisce meglio un documento
 strutturato in linguaggio naturale che una lista piatta di triple.
+
+NB: le label localizzate (italiano, inglese, ecc.) vivono in locales.py.
+    Qui rimane solo lo scheletro strutturale (entity + predicates)
+    che è indipendente dalla lingua.
 """
 
 from typing import Dict, List
+from clam.core.locales import get_category_labels
+from clam.config import CONFIG
 
 
 # ─────────────────────────────────────────────────────────────────────
-# CATEGORIE ONTOLOGICHE
-# Ogni categoria raggruppa predicati logicamente affini.
-# "label" = intestazione visibile nel documento generato per l'LLM
-# "predicates" = predicati ammessi in questa categoria
-# "entity" = soggetto a cui si riferiscono i predicati
+# KNOWLEDGE CATEGORIES (structural skeleton — language-independent)
+# The 'label' and 'render_labels' fields are intentionally left blank here;
+# they are fetched from locales.py at runtime via get_localized_categories().
+# 'entity' and 'predicates' are internal ontology keys that never change.
 # ─────────────────────────────────────────────────────────────────────
 KNOWLEDGE_CATEGORIES: Dict[str, dict] = {
     "identita_utente": {
-        "label": "📋 PROFILO DELL'UTENTE",
+        "label": "",          # overridden by locales at runtime
         "predicates": ["ha_nome", "ha_eta", "ha_lavoro", "vive_a", "nazionalita"],
         "entity": "Utente",
-        # Formato di rendering: predicato → etichetta leggibile
-        "render_labels": {
-            "ha_nome": "Nome",
-            "ha_eta": "Età",
-            "ha_lavoro": "Lavoro",
-            "vive_a": "Vive a",
-            "nazionalita": "Nazionalità",
-        }
+        "render_labels": {},  # overridden by locales at runtime
     },
     "preferenze_utente": {
-        "label": "💡 PREFERENZE DELL'UTENTE",
+        "label": "",
         "predicates": [
             "preferisce_colore", "preferisce_animale", "preferisce_cibo",
             "preferisce_musica", "preferisce_film", "hobby"
         ],
         "entity": "Utente",
-        "render_labels": {
-            "preferisce_colore": "Colore preferito",
-            "preferisce_animale": "Animale preferito",
-            "preferisce_cibo": "Cibo preferito",
-            "preferisce_musica": "Musica preferita",
-            "preferisce_film": "Film preferito",
-            "hobby": "Hobby",
-        }
+        "render_labels": {},
     },
     "esperienze_utente": {
-        "label": "🧠 COSE CHE CLAM HA IMPARATO SULL'UTENTE",
+        "label": "",
         "predicates": [
             "ha_visitato", "ha_conosciuto", "usa_tecnologia",
             "sa_fare", "fatto_generico"
         ],
         "entity": "Utente",
-        # Le esperienze vengono renderizzate come lista, non key-value
-        "render_labels": {
-            "ha_visitato": "Ha visitato",
-            "ha_conosciuto": "Conosce",
-            "usa_tecnologia": "Usa",
-            "sa_fare": "Sa fare",
-            "fatto_generico": "",  # Nessun prefisso, testo libero
-        }
+        "render_labels": {},
     },
     "identita_clam": {
-        "label": "🤖 IDENTITÀ DI CLAM",
+        "label": "",
         "predicates": [
             "è", "ha_eta", "preferisce_animale", "preferisce_colore",
             "ha_imparato"
         ],
         "entity": "CLAM",
-        "render_labels": {
-            "è": "Ruolo",
-            "ha_eta": "Età",
-            "preferisce_animale": "Animale preferito",
-            "preferisce_colore": "Colore preferito",
-            "ha_imparato": "Ha imparato che",
-        }
+        "render_labels": {},
     },
 }
+
+
+def get_localized_categories(lang: str = None) -> Dict[str, dict]:
+    """
+    Returns KNOWLEDGE_CATEGORIES enriched with localized label and render_labels
+    fetched from locales.py. If lang is None, uses CONFIG.language.
+
+    The structural fields (entity, predicates) remain unchanged so that
+    the rest of the codebase never needs to know about languages.
+    """
+    effective_lang: str = lang or CONFIG.language
+    localized: Dict[str, dict] = get_category_labels(effective_lang)
+
+    result: Dict[str, dict] = {}
+    for cat_name, cat_data in KNOWLEDGE_CATEGORIES.items():
+        merged = dict(cat_data)  # shallow copy of structural data
+        if cat_name in localized:
+            merged["label"] = localized[cat_name]["label"]
+            merged["render_labels"] = localized[cat_name]["render_labels"]
+        result[cat_name] = merged
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────

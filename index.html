@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" class="dark">
+<html lang="en" class="dark">
 
 <head>
     <meta charset="UTF-8">
@@ -50,11 +50,26 @@
 
 <body class="min-h-screen p-6 font-sans">
 
-    <header class="mb-8 border-b border-gray-800 pb-4">
-        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-            CLAM Dashboard
-        </h1>
-        <p class="text-gray-400 text-sm mt-1">CLAM OS Memory Stream & Vis</p>
+    <header class="mb-8 border-b border-gray-800 pb-4 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+                CLAM Dashboard
+            </h1>
+            <p class="text-gray-400 text-sm mt-1" data-i18n="header_subtitle">CLAM OS Memory Stream &amp; Vis</p>
+        </div>
+        <!-- Language Switcher: scelta della lingua sincronizzata col config.yaml backend -->
+        <div class="flex items-center gap-2">
+            <span class="text-gray-500 text-xs" data-i18n="lang_label">Language:</span>
+            <select id="lang-switcher"
+                class="bg-gray-800 border border-gray-700 text-white text-sm rounded px-2 py-1 cursor-pointer hover:border-accent transition-colors"
+                onchange="onLangChange(this.value)">
+                <option value="it">🇮🇹 Italiano</option>
+                <option value="en" selected>🇬🇧 English</option>
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="fr">🇫🇷 Français</option>
+                <option value="es">🇪🇸 Español</option>
+            </select>
+        </div>
     </header>
 
     <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -67,14 +82,14 @@
                 <div class="flex gap-2">
                     <input type="text" id="chat-input"
                         class="w-full bg-gray-900 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:ring-accent"
-                        placeholder="Insegna qualcosa a CLAM...">
+                        data-i18n-placeholder="chat_placeholder" placeholder="Teach CLAM something...">
                     <button onclick="sendMessage()"
                         class="bg-accent hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium">Tx</button>
-                    <button onclick="clearChat()" title="Pulisci Chat"
+                    <button onclick="clearChat()" data-i18n-title="btn_clear_chat" title="Clear Chat"
                         class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg font-medium transition-colors">🧹</button>
-                    <button onclick="clearMemory()" title="Svuota Memoria dell'Agente"
+                    <button onclick="clearMemory()" data-i18n-title="btn_clear_memory" title="Clear Agent Memory"
                         class="bg-red-900/40 hover:bg-red-600 text-red-500 hover:text-white border border-red-800 hover:border-red-600 px-3 py-2 rounded-lg font-medium transition-all">🧠🧨</button>
-                    <button onclick="resetAndSeed()" title="Reset + Ri-carica Seed"
+                    <button onclick="resetAndSeed()" data-i18n-title="btn_reset_seed" title="Reset + Reload Seed"
                         class="bg-yellow-900/40 hover:bg-yellow-600 text-yellow-500 hover:text-white border border-yellow-800 hover:border-yellow-600 px-3 py-2 rounded-lg font-medium transition-all">🌱</button>
                 </div>
             </div>
@@ -106,7 +121,7 @@
                 </h2>
                 <div id="knowledge-doc-preview"
                     class="flex-1 font-mono text-xs text-yellow-200/80 bg-gray-900 border border-yellow-900/30 p-3 rounded whitespace-pre-wrap log-scroll overflow-y-auto max-h-[200px]">
-                    Caricamento...</div>
+                    Loading...</div>
                 <!-- Form per aggiungere triple manualmente -->
                 <div class="mt-3 flex gap-2 flex-wrap">
                     <select id="triple-subject"
@@ -160,7 +175,7 @@
             <div
                 class="glass p-5 rounded-xl border border-gray-800 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
                 <h2 class="text-lg font-semibold text-white mb-3 flex justify-between items-center">
-                    Buffer Cognitivo (Subconscio / RAM)
+                    <span data-i18n="stm_title">Cognitive Buffer (Subconscious / RAM)</span>
                     <span class="text-xs bg-gray-800 text-gray-300 px-2 py-1 rounded">TCP WS: <span id="ws-status"
                             class="text-yellow-400">Conn...</span></span>
                 </h2>
@@ -174,7 +189,7 @@
             <div
                 class="glass p-5 rounded-xl border border-gray-800 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
                 <h2 class="text-lg font-semibold text-white mb-3 flex justify-between items-center text-semantic">
-                    Conoscenza Consolidata (Fatti Appresi)
+                    <span data-i18n="ltm_title">Consolidated Knowledge (Learned Facts)</span>
                 </h2>
                 <div id="ltm-grid" class="memory-grid flex-1 border border-gray-700 p-2 rounded bg-gray-900 log-scroll">
                     <!-- Cards LTM dinamiche qui -->
@@ -186,7 +201,7 @@
             <div
                 class="glass p-5 rounded-xl border border-gray-800 shadow-xl flex flex-col overflow-hidden max-h-[300px]">
                 <h2 class="text-lg font-semibold text-white mb-3 flex justify-between items-center text-yellow-400">
-                    Verità Assolute (Knowledge Graph)
+                    <span data-i18n="graph_title">Absolute Truths (Knowledge Graph)</span>
                 </h2>
                 <div id="graph-grid"
                     class="memory-grid flex-1 border border-gray-700 p-2 rounded bg-gray-900 log-scroll">
@@ -199,6 +214,249 @@
     </main>
 
     <script>
+        // ──────────────────────────────────────────────────────────────────
+        // i18n FRONTEND: traduzione JS dell'interfaccia
+        // La lingua del backend (prompt LLM) si cambia in config.yaml.
+        // Questa parte gestisce solo i testi statici dell'UI nel browser.
+        // ──────────────────────────────────────────────────────────────────
+        const TRANSLATIONS = {
+            it: {
+                header_subtitle: "CLAM OS Memory Stream & Vis",
+                lang_label: "Lingua:",
+                chat_placeholder: "Insegna qualcosa a CLAM...",
+                btn_clear_chat: "Pulisci Chat",
+                btn_clear_memory: "Svuota Memoria dell'Agente",
+                btn_reset_seed: "Reset + Ri-carica Seed",
+                stm_title: "Buffer Cognitivo (Subconscio / RAM)",
+                ltm_title: "Conoscenza Consolidata (Fatti Appresi)",
+                graph_title: "Verità Assolute (Knowledge Graph)",
+                stm_empty: "In ascolto per nuove ipotesi...",
+                ltm_empty: "Database interrogato...",
+                graph_empty: "In attesa di stabilire verità incontrovertibili...",
+                doc_loading: "Caricamento...",
+                doc_no_facts: "Nessun fatto registrato.",
+                doc_conn_error: "Errore di connessione al server.",
+                log_init: "[Init] Moduli Concorrenti in Ascolto...",
+                log_new_hypothesis: "[Buffer] Nuova Ipotesi:",
+                log_memory_erased: "[Sistema] 🧨 Memoria globale azzerata dall'utente.",
+                log_seed_done: "[Sistema] 🌱 Reset + Seed completato:",
+                log_seed_facts: "fatti caricati",
+                log_triple_added: "[Knowledge] ➕ Aggiunto:",
+                log_memory_removed: "[Sistema] 🗑️ Ricordo rimosso chirurgicamente",
+                confirm_clear_memory: "ATTENZIONE: Stai per cancellare definitivamente tutta la memoria di CLAM (sia a breve che a lungo termine). Sei sicuro di voler procedere?",
+                confirm_reset_seed: "ATTENZIONE: Questo cancellerà TUTTA la memoria e ricaricherà solo i fatti dal file seed_truths.yaml. Procedere?",
+                confirm_delete_item: "ATTENZIONE: Stai per cancellare definitivamente questo frammento di memoria. Procedere?",
+                alert_no_value: "Inserisci un valore!",
+                ws_online: "Online",
+                ws_offline: "Offline (Reconnecting...)",
+                stm_void: "Vuoto (Nessun concetto processato)",
+                ltm_void: "Nessun fatto consolidato nel DB",
+                graph_void: "Nessuna verità matematica stabilita.",
+                fact_consolidated: "Fatto Consolidato",
+                score_label: "Score:",
+                mem_erased_feedback: "Memoria formattata... In attesa di nuovi stimoli.",
+                ltm_erased_feedback: "Database vuoto...",
+                graph_erased_feedback: "Grafo relazionale resettato."
+            },
+            en: {
+                header_subtitle: "CLAM OS Memory Stream & Vis",
+                lang_label: "Language:",
+                chat_placeholder: "Teach CLAM something...",
+                btn_clear_chat: "Clear Chat",
+                btn_clear_memory: "Clear Agent Memory",
+                btn_reset_seed: "Reset + Reload Seed",
+                stm_title: "Cognitive Buffer (Subconscious / RAM)",
+                ltm_title: "Consolidated Knowledge (Learned Facts)",
+                graph_title: "Absolute Truths (Knowledge Graph)",
+                stm_empty: "Listening for new hypotheses...",
+                ltm_empty: "Database queried...",
+                graph_empty: "Waiting to establish incontrovertible truths...",
+                doc_loading: "Loading...",
+                doc_no_facts: "No facts recorded.",
+                doc_conn_error: "Server connection error.",
+                log_init: "[Init] Concurrent Modules Listening...",
+                log_new_hypothesis: "[Buffer] New Hypothesis:",
+                log_memory_erased: "[System] 🧨 Global memory wiped by user.",
+                log_seed_done: "[System] 🌱 Reset + Seed completed:",
+                log_seed_facts: "facts loaded",
+                log_triple_added: "[Knowledge] ➕ Added:",
+                log_memory_removed: "[System] 🗑️ Memory fragment surgically removed",
+                confirm_clear_memory: "WARNING: You are about to permanently delete ALL CLAM memory (both short and long term). Are you sure you want to proceed?",
+                confirm_reset_seed: "WARNING: This will delete ALL memory and reload only the facts from seed_truths.yaml. Proceed?",
+                confirm_delete_item: "WARNING: You are about to permanently delete this memory fragment. Proceed?",
+                alert_no_value: "Please enter a value!",
+                ws_online: "Online",
+                ws_offline: "Offline (Reconnecting...)",
+                stm_void: "Empty (No concepts processed)",
+                ltm_void: "No consolidated facts in DB",
+                graph_void: "No mathematical truths established.",
+                fact_consolidated: "Consolidated Fact",
+                score_label: "Score:",
+                mem_erased_feedback: "Memory formatted... Waiting for new stimuli.",
+                ltm_erased_feedback: "Database empty...",
+                graph_erased_feedback: "Relational graph reset."
+            },
+            de: {
+                header_subtitle: "CLAM OS Speicher-Stream & Vis",
+                lang_label: "Sprache:",
+                chat_placeholder: "Bringe CLAM etwas bei...",
+                btn_clear_chat: "Chat leeren",
+                btn_clear_memory: "Agenten-Speicher leeren",
+                btn_reset_seed: "Zurücksetzen + Seed neu laden",
+                stm_title: "Kognitiver Puffer (Unterbewusstsein / RAM)",
+                ltm_title: "Konsolidiertes Wissen (Gelernte Fakten)",
+                graph_title: "Absolute Wahrheiten (Knowledge Graph)",
+                stm_empty: "Warte auf neue Hypothesen...",
+                ltm_empty: "Datenbank abgefragt...",
+                graph_empty: "Warte auf unwiderlegbare Wahrheiten...",
+                doc_loading: "Laden...",
+                doc_no_facts: "Keine Fakten gespeichert.",
+                doc_conn_error: "Serververbindungsfehler.",
+                log_init: "[Init] Gleichzeitige Module lauschen...",
+                log_new_hypothesis: "[Puffer] Neue Hypothese:",
+                log_memory_erased: "[System] 🧨 Globaler Speicher vom Benutzer gelöscht.",
+                log_seed_done: "[System] 🌱 Reset + Seed abgeschlossen:",
+                log_seed_facts: "Fakten geladen",
+                log_triple_added: "[Wissen] ➕ Hinzugefügt:",
+                log_memory_removed: "[System] 🗑️ Speicherfragment chirurgisch entfernt",
+                confirm_clear_memory: "ACHTUNG: Sie sind dabei, den gesamten CLAM-Speicher dauerhaft zu löschen. Sicher?",
+                confirm_reset_seed: "ACHTUNG: Dies löscht ALLES und lädt nur Fakten aus seed_truths.yaml neu. Fortfahren?",
+                confirm_delete_item: "ACHTUNG: Sie sind dabei, dieses Speicherfragment dauerhaft zu löschen. Fortfahren?",
+                alert_no_value: "Bitte einen Wert eingeben!",
+                ws_online: "Online",
+                ws_offline: "Offline (Verbinde...)",
+                stm_void: "Leer (Keine Konzepte verarbeitet)",
+                ltm_void: "Keine konsolidierten Fakten in der DB",
+                graph_void: "Keine mathematischen Wahrheiten festgestellt.",
+                fact_consolidated: "Konsolidierter Fakt",
+                score_label: "Punkte:",
+                mem_erased_feedback: "Speicher formatiert... Warte auf neue Stimuli.",
+                ltm_erased_feedback: "Datenbank leer...",
+                graph_erased_feedback: "Relationales Diagramm zurückgesetzt."
+            },
+            fr: {
+                header_subtitle: "CLAM OS Flux Mémoire & Vis",
+                lang_label: "Langue :",
+                chat_placeholder: "Apprenez quelque chose à CLAM...",
+                btn_clear_chat: "Vider le chat",
+                btn_clear_memory: "Vider la mémoire de l'agent",
+                btn_reset_seed: "Réinitialiser + Recharger les seeds",
+                stm_title: "Tampon Cognitif (Subconscient / RAM)",
+                ltm_title: "Connaissance Consolidée (Faits Appris)",
+                graph_title: "Vérités Absolues (Graphe de Connaissances)",
+                stm_empty: "À l'écoute de nouvelles hypothèses...",
+                ltm_empty: "Base de données interrogée...",
+                graph_empty: "En attente d'établir des vérités incontestables...",
+                doc_loading: "Chargement...",
+                doc_no_facts: "Aucun fait enregistré.",
+                doc_conn_error: "Erreur de connexion au serveur.",
+                log_init: "[Init] Modules Concurrents en Écoute...",
+                log_new_hypothesis: "[Tampon] Nouvelle Hypothèse :",
+                log_memory_erased: "[Système] 🧨 Mémoire globale effacée par l'utilisateur.",
+                log_seed_done: "[Système] 🌱 Réinitialisation + Seed terminé :",
+                log_seed_facts: "faits chargés",
+                log_triple_added: "[Connaissance] ➕ Ajouté :",
+                log_memory_removed: "[Système] 🗑️ Fragment de mémoire supprimé chirurgicalement",
+                confirm_clear_memory: "ATTENTION : Vous êtes sur le point de supprimer définitivement toute la mémoire de CLAM. Êtes-vous sûr ?",
+                confirm_reset_seed: "ATTENTION : Cela supprimera TOUTE la mémoire et rechargera uniquement les faits de seed_truths.yaml. Continuer ?",
+                confirm_delete_item: "ATTENTION : Vous êtes sur le point de supprimer définitivement ce fragment de mémoire. Continuer ?",
+                alert_no_value: "Veuillez saisir une valeur !",
+                ws_online: "En ligne",
+                ws_offline: "Hors ligne (Reconnexion...)",
+                stm_void: "Vide (Aucun concept traité)",
+                ltm_void: "Aucun fait consolidé dans la DB",
+                graph_void: "Aucune vérité mathématique établie.",
+                fact_consolidated: "Fait Consolidé",
+                score_label: "Score :",
+                mem_erased_feedback: "Mémoire formatée... En attente de nouveaux stimuli.",
+                ltm_erased_feedback: "Base de données vide...",
+                graph_erased_feedback: "Graphe relationnel réinitialisé."
+            },
+            es: {
+                header_subtitle: "CLAM OS Flujo de Memoria & Vis",
+                lang_label: "Idioma:",
+                chat_placeholder: "Enseña algo a CLAM...",
+                btn_clear_chat: "Limpiar chat",
+                btn_clear_memory: "Vaciar memoria del agente",
+                btn_reset_seed: "Reiniciar + Recargar Seed",
+                stm_title: "Búfer Cognitivo (Subconsciente / RAM)",
+                ltm_title: "Conocimiento Consolidado (Hechos Aprendidos)",
+                graph_title: "Verdades Absolutas (Grafo de Conocimiento)",
+                stm_empty: "Escuchando nuevas hipótesis...",
+                ltm_empty: "Base de datos consultada...",
+                graph_empty: "Esperando establecer verdades incontrovertibles...",
+                doc_loading: "Cargando...",
+                doc_no_facts: "No hay hechos registrados.",
+                doc_conn_error: "Error de conexión con el servidor.",
+                log_init: "[Init] Módulos Concurrentes Escuchando...",
+                log_new_hypothesis: "[Búfer] Nueva Hipótesis:",
+                log_memory_erased: "[Sistema] 🧨 Memoria global borrada por el usuario.",
+                log_seed_done: "[Sistema] 🌱 Reinicio + Seed completado:",
+                log_seed_facts: "hechos cargados",
+                log_triple_added: "[Conocimiento] ➕ Añadido:",
+                log_memory_removed: "[Sistema] 🗑️ Fragmento de memoria eliminado quirúrgicamente",
+                confirm_clear_memory: "ATENCIÓN: Estás a punto de eliminar permanentemente toda la memoria de CLAM. ¿Estás seguro?",
+                confirm_reset_seed: "ATENCIÓN: Esto eliminará TODA la memoria y recargará solo los hechos de seed_truths.yaml. ¿Continuar?",
+                confirm_delete_item: "ATENCIÓN: Estás a punto de eliminar permanentemente este fragmento de memoria. ¿Continuar?",
+                alert_no_value: "¡Por favor introduce un valor!",
+                ws_online: "En línea",
+                ws_offline: "Sin conexión (Reconectando...)",
+                stm_void: "Vacío (Ningún concepto procesado)",
+                ltm_void: "No hay hechos consolidados en la DB",
+                graph_void: "No se han establecido verdades matemáticas.",
+                fact_consolidated: "Hecho Consolidado",
+                score_label: "Puntuación:",
+                mem_erased_feedback: "Memoria formateada... Esperando nuevos estímulos.",
+                ltm_erased_feedback: "Base de datos vacía...",
+                graph_erased_feedback: "Grafo relacional restablecido."
+            }
+        };
+
+        // Restituisce le traduzioni per la lingua attiva
+        function t(key) {
+            return (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key]) ||
+                (TRANSLATIONS['en'] && TRANSLATIONS['en'][key]) ||
+                key;
+        }
+
+        // Lingua corrente: legge dal localStorage o usa 'en' come default
+        let currentLang = localStorage.getItem('clam_ui_lang') || 'en';
+
+        function applyLocale(lang) {
+            currentLang = lang;
+            localStorage.setItem('clam_ui_lang', lang);
+            document.documentElement.lang = lang;
+
+            // Aggiorna il dropdown
+            const switcher = document.getElementById('lang-switcher');
+            if (switcher) switcher.value = lang;
+
+            // Aggiorna testi data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t(key)) el.textContent = t(key);
+            });
+
+            // Aggiorna placeholder data-i18n-placeholder
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t(key)) el.placeholder = t(key);
+            });
+
+            // Aggiorna title data-i18n-title
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (t(key)) el.title = t(key);
+            });
+        }
+
+        function onLangChange(lang) {
+            applyLocale(lang);
+        }
+
+        // Applica la lingua salvata al caricamento
+        applyLocale(currentLang);
+
         const chatInput = document.getElementById('chat-input'), chatHistory = document.getElementById('chat-history');
 
         // Ripristina la chat dal localStorage al caricamento della pagina
@@ -229,17 +487,17 @@
         function clearChat() { chatHistory.innerHTML = ''; localStorage.removeItem('clam_chat_history'); }
 
         async function clearMemory() {
-            if (!confirm("ATTENZIONE: Stai per cancellare definitivamente tutta la memoria di CLAM (sia a breve che a lungo termine). Sei sicuro di voler procedere?")) {
+            if (!confirm(t('confirm_clear_memory'))) {
                 return;
             }
             try {
                 const res = await fetch('http://localhost:8000/api/memory', { method: 'DELETE' });
                 if (res.ok) {
                     // Feedback visuale immediato
-                    document.getElementById('stm-grid').innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Memoria formattata... In attesa di nuovi stimoli.</div>';
-                    document.getElementById('ltm-grid').innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Database vuoto...</div>';
-                    document.getElementById('graph-grid').innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Grafo relazionale resettato.</div>';
-                    document.getElementById('consciousness-log').innerHTML += '<div>[Sistema] 🧨 Memoria globale azzerata dall\'utente.</div>';
+                    document.getElementById('stm-grid').innerHTML = `<div class="text-gray-500 text-sm mt-2 ml-2">${t('mem_erased_feedback')}</div>`;
+                    document.getElementById('ltm-grid').innerHTML = `<div class="text-gray-500 text-sm mt-2 ml-2">${t('ltm_erased_feedback')}</div>`;
+                    document.getElementById('graph-grid').innerHTML = `<div class="text-gray-500 text-sm mt-2 ml-2">${t('graph_erased_feedback')}</div>`;
+                    document.getElementById('consciousness-log').innerHTML += `<div>${t('log_memory_erased')}</div>`;
                     document.getElementById('stat-volatile').textContent = "0";
                     document.getElementById('stat-semantic').textContent = "0";
                     document.getElementById('stat-graph').textContent = "0";
@@ -249,12 +507,12 @@
         }
 
         async function resetAndSeed() {
-            if (!confirm("ATTENZIONE: Questo cancellerà TUTTA la memoria e ricaricherà solo i fatti dal file seed_truths.yaml. Procedere?")) return;
+            if (!confirm(t('confirm_reset_seed'))) return;
             try {
                 const res = await fetch('http://localhost:8000/api/knowledge/reset-and-seed', { method: 'POST' });
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('consciousness-log').innerHTML += `<div>[Sistema] 🌱 Reset + Seed completato: ${data.loaded} fatti caricati</div>`;
+                    document.getElementById('consciousness-log').innerHTML += `<div>${t('log_seed_done')} ${data.loaded} ${t('log_seed_facts')}</div>`;
                     refreshKnowledgeDoc();
                 }
             } catch (err) { console.error(err); }
@@ -264,9 +522,9 @@
             try {
                 const res = await fetch('http://localhost:8000/api/knowledge/document');
                 const data = await res.json();
-                document.getElementById('knowledge-doc-preview').textContent = data.document || 'Nessun fatto registrato.';
+                document.getElementById('knowledge-doc-preview').textContent = data.document || t('doc_no_facts');
             } catch (err) {
-                document.getElementById('knowledge-doc-preview').textContent = 'Errore di connessione al server.';
+                document.getElementById('knowledge-doc-preview').textContent = t('doc_conn_error');
             }
         }
 
@@ -274,7 +532,7 @@
             const subject = document.getElementById('triple-subject').value;
             const predicate = document.getElementById('triple-predicate').value;
             const object_ = document.getElementById('triple-object').value.trim();
-            if (!object_) { alert('Inserisci un valore!'); return; }
+            if (!object_) { alert(t('alert_no_value')); return; }
             try {
                 const res = await fetch('http://localhost:8000/api/knowledge/triple', {
                     method: 'POST',
@@ -283,7 +541,7 @@
                 });
                 if (res.ok) {
                     document.getElementById('triple-object').value = '';
-                    document.getElementById('consciousness-log').innerHTML += `<div>[Knowledge] ➕ Aggiunto: ${subject} → ${predicate} → ${object_}</div>`;
+                    document.getElementById('consciousness-log').innerHTML += `<div>${t('log_triple_added')} ${subject} → ${predicate} → ${object_}</div>`;
                     refreshKnowledgeDoc();
                 }
             } catch (err) { console.error(err); }
@@ -297,11 +555,11 @@
         let ws;
 
         async function deleteMemoryItem(store, id) {
-            if (!confirm(`ATTENZIONE: Stai per cancellare definitivamente questo frammento di memoria. Procedere?`)) return;
+            if (!confirm(t('confirm_delete_item'))) return;
             try {
                 const res = await fetch(`http://localhost:8000/api/memory/item/${store}/${id}`, { method: 'DELETE' });
                 if (res.ok) {
-                    document.getElementById('consciousness-log').innerHTML += `<div>[Sistema] 🗑️ Ricordo rimosso chirurgicamente (${store}).</div>`;
+                    document.getElementById('consciousness-log').innerHTML += `<div>${t('log_memory_removed')} (${store}).</div>`;
                     // L'UI si aggiornerà al prossimo resync WS generato dal ciclo in background o dalla prossima iterazione
                 }
             } catch (err) { console.error(err); }
@@ -313,7 +571,7 @@
             if (score >= 3 || isLTM) { borderColor = 'border-emerald-500'; bgColor = 'bg-emerald-900/30'; colorTxt = 'text-emerald-400'; }
             if (score <= -1 && !isLTM) { borderColor = 'border-gray-500'; bgColor = 'bg-gray-800'; colorTxt = 'text-gray-400'; }
 
-            const displayScore = isLTM ? 'Fatto Consolidato' : `Score: ${score}`;
+            const displayScore = isLTM ? t('fact_consolidated') : `${t('score_label')} ${score}`;
             const shortTitle = title.length > 30 ? title.substring(0, 30) + '...' : title;
 
             return `
@@ -333,7 +591,7 @@
             ws = new WebSocket("ws://localhost:8000/ws");
 
             ws.onopen = () => {
-                wsStatus.textContent = "Online";
+                wsStatus.textContent = t('ws_online');
                 wsStatus.className = "text-green-400 font-bold";
             };
 
@@ -351,7 +609,7 @@
                     if (data.nodes.length > 0) {
                         stmGrid.innerHTML = data.nodes.map(n => renderCard(n.id_concetto, n.id_concetto.replace('concept_', ''), n.descrizione, n.confidence_score, 'stm')).join('');
                     } else {
-                        stmGrid.innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Vuoto (Nessun concetto processato)</div>';
+                        stmGrid.innerHTML = `<div class="text-gray-500 text-sm mt-2 ml-2">${t('stm_void')}</div>`;
                     }
 
                     // Check for new STM nodes to append to log
@@ -360,7 +618,7 @@
                             seenNodes.add(n.id_concetto);
                             const label = n.descrizione.length > 40 ? n.descrizione.substring(0, 40) + '...' : n.descrizione;
                             const logBox = document.getElementById('consciousness-log');
-                            logBox.innerHTML += `<div>[Buffer] Nuova Ipotesi: ${label}</div>`;
+                            logBox.innerHTML += `<div>${t('log_new_hypothesis')} ${label}</div>`;
                             logBox.scrollTop = logBox.scrollHeight;
                         }
                     });
@@ -379,7 +637,7 @@
                         if (ltmHtml !== '') {
                             ltmGrid.innerHTML = ltmHtml;
                         } else {
-                            ltmGrid.innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Nessun fatto consolidato nel DB</div>';
+                            ltmGrid.innerHTML = `<div class="text-gray-500 text-sm mt-2 ml-2">${t('ltm_void')}</div>`;
                         }
                     }
 
@@ -398,7 +656,7 @@
                                  </div>`
                             ).join('');
                         } else {
-                            graphGrid.innerHTML = '<div class="text-gray-500 text-sm mt-2 ml-2">Nessuna verità matematica stabilita.</div>';
+                            graphGrid.innerHTML = `<div class="text-gray-500 text-sm mt-2 ml-2">${t('graph_void')}</div>`;
                         }
                     }
                 } else if (data.type === 'console_log') {
@@ -407,9 +665,9 @@
             };
 
             ws.onclose = () => {
-                wsStatus.textContent = "Offline (Reconnecting...)";
+                wsStatus.textContent = t('ws_offline');
                 wsStatus.className = "text-red-500 animate-pulse";
-                setTimeout(connectWS, 2000); // Riconnessione automatica ogni 2s
+                setTimeout(connectWS, 2000); // Auto-reconnect every 2s
             };
 
             ws.onerror = (err) => {
