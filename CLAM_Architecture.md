@@ -1,65 +1,132 @@
 # CLAM Architecture
 
-## 1. Visione Generale
-Il sistema CLAM è un agente basato su LLM (Large Language Model) dotato di un'architettura di memoria a due livelli. L'obiettivo non è fare fine-tuning del modello, ma affiancargli un sistema di database dinamico che simuli il processo cognitivo umano: percezione, valutazione temporanea, validazione tramite conferme, consolidamento a lungo termine e, fondamentale, il "decadimento" (l'oblio) per le informazioni non confermate.
-Il sistema esporrà anche un'interfaccia visiva (Dashboard) disaccoppiata per monitorare il flusso di coscienza e l'evoluzione dei nodi di memoria.
+## 1. General Vision
 
-## 2. Fase 1: Struttura Dati e Memorie
-**Direttiva per Antigravity:** Evitare assolutamente dizionari Python non tipizzati. Utilizzare Pydantic o dataclasses per garantire la rigidità dei dati. Un dato corrotto nel buffer distruggerà i ragionamenti futuri.
+The CLAM system is an LLM-based agent with a two-tier memory architecture. The goal is **not** to fine-tune the model, but to pair it with a dynamic database system that simulates the human cognitive process: perception, short-term evaluation, validation through confirmation, long-term consolidation, and — critically — **memory decay** (forgetting) for unconfirmed information.
 
-### A. Short-Term Buffer (La Memoria Volatile / Scratchpad)
-Un database in RAM (es. SQLite in-memory o Redis) ad altissima velocità per l'elaborazione dei concetti in tempo reale.
-*Struttura del dato (MemoryNode):*
-* `id_concetto` (UUID)
-* `descrizione` (String)
-* `confidence_score` (Int, default: 1)
-* `timestamp_creazione` (Datetime)
-* `timestamp_ultimo_accesso` (Datetime)
-* `contesto_origine` (String - dove e come ha dedotto l'informazione)
+The system also exposes a fully decoupled visual interface (Dashboard) to monitor the agent's stream of consciousness and the evolution of memory nodes.
 
-### B. Long-Term Memory (Il Database Consolidato e Biforcato)
-Il deposito permanente. Cruciale: Sulla base delle architetture cognitive avanzate (rif. CoALA), il database permanente deve essere diviso in due collezioni vettoriali distinte:
-* **Memoria Semantica (I Fatti):** Dati oggettivi e preferenze statiche (es. "L'utente usa ESP32", "L'indirizzo IP del server è 192.168.1.10").
-* **Memoria Episodica (Le Esperienze):** Tracce di interazioni passate, processi decisionali e risoluzione di problemi (es. "Il 12 Maggio abbiamo risolto un bug sul sensore capacitivo filtrando il rumore con una media mobile"). Questa è la base per non ripetere gli stessi errori.
+---
 
-## 3. Fase 2: I Motori Logici (Worker Asincroni)
-**Direttiva per Antigravity:** Questi moduli devono girare in modo indipendente. È obbligatorio l'uso di asyncio per non bloccare il loop principale.
+## 2. Phase 1: Data Structures & Memories
 
-### A. Inference Engine (Il Percettore)
-Analizza il prompt dell'utente e la risposta generata. Genera in background un JSON strutturato con le nuove "deduzioni" da inserire nello Short-Term Buffer.
+> **Directive:** Absolutely avoid untyped Python dictionaries. Use Pydantic or dataclasses to guarantee data rigidity. Corrupted data in the buffer will destroy future reasoning chains.
 
-### B. The Critic (Il Motore di Validazione ad Alto Scetticismo)
-Funzione: Quando l'LLM affronta un argomento, il Critic scansiona lo Short-Term Buffer.
-Logica "Avvocato del Diavolo" (rif. Reflexion): Non deve cercare conferme, ma contraddizioni. Il prompt di sistema del Critic deve obbligarlo a trovare falle nel ragionamento temporaneo attraverso un dibattito interno testuale, non solo matematico.
-Aggiornamento Score: Se il concetto resiste al Critic, `confidence_score` += 1. Se fallisce, `confidence_score` -= 1.
+### A. Short-Term Buffer (Volatile Memory / Scratchpad)
 
-### C. Garbage Collector & Memory Evolution (Promozione, Collegamento e Oblio)
-Un task asincrono che cicla sul buffer ogni N minuti.
-* **Promozione e Zettelkasten (Link Generation):** Se `confidence_score >= PROMOTION_THRESHOLD`, il nodo viene estratto. PRIMA di salvarlo nella Long-Term Memory, il sistema esegue una ricerca vettoriale per trovare nodi simili già esistenti e crea dei metadati di collegamento (Linkage). Le memorie non sono isolate, formano un grafo.
-* **Decadimento (L'Oblio):** Se `(Time.now() - timestamp_ultimo_accesso) > DECAY_TIME` e `confidence_score < MIN_SCORE`, il nodo viene cancellato permanentemente (implementazione della vulnerabilità cognitiva: fare spazio per concetti migliori).
+A high-speed in-memory database (SQLite in-memory) for real-time concept processing.
 
-## 4. Fase 3: Il Loop di Autocorrezione (Self-Reflection Avanzato)
-L'autocorrezione pura fallisce spesso a causa del bias di conferma dell'LLM. Antigravity deve implementare una logica di Recollection-Familiarity.
-* **Valutazione della Familiarità (Familiarity Check):** L'LLM valuta se la richiesta dell'utente è basilare. Se sì, recupera i fatti dalla Memoria Semantica ed emette la risposta (Fast Track).
-* **Ricostruzione del Ricordo (Recollection):** Se la richiesta è complessa, innesca una ricerca profonda nella Memoria Episodica per ricostruire le catene di eventi simili del passato.
-* **Dibattito Interno (Internal Debate):** Prima di rispondere, una chiamata secondaria all'LLM (con un ruolo antagonistico) valuta la bozza alla ricerca di violazioni delle regole apprese. Se trova errori, forza la riscrittura.
+**Data structure (`MemoryNode`):**
+| Field | Type | Description |
+|---|---|---|
+| `concept_id` | UUID | Unique identifier |
+| `description` | String | The concept content |
+| `confidence_score` | Int (default: 1) | Validation score |
+| `creation_timestamp` | Datetime | When the node was created |
+| `last_access_timestamp` | Datetime | When the node was last accessed |
+| `origin_context` | String | Where and how the information was inferred |
 
-## 5. Fase 4: La Dashboard CLAM (L'Interfaccia Visiva)
-Un modulo frontend totalmente disaccoppiato per osservare l'agente "pensare" ed evolvere.
-* **Backend (API Bridge):** Tecnologia: FastAPI con WebSockets (VIETATO IL POLLING). Il motore logico invierà aggiornamenti push al frontend solo ai cambi di stato delle memorie.
-* **Frontend (L'Interfaccia):** Tecnologia Prototipo: Streamlit, Gradio, o HTML/JS con librerie per grafi (es. Vis.js).
-* **Elementi Visivi Richiesti:**
-  * Stream of Consciousness: Un terminale a scorrimento (log del Critic e del Dibattito Interno).
-  * Dashboard Memoria Biforcata: Contatori separati per Nodi Volatili, Memoria Semantica (Fatti) e Memoria Episodica (Esperienze).
-  * Il Grafo di Crescita Zettelkasten: Visualizzazione a nodi interconnessi. I nodi volatili pulsano; i nodi promossi e collegati (Link Generation) formano cluster evidenti. I nodi in decadimento sbiadiscono.
+### B. Long-Term Memory (Persistent & Bifurcated)
 
-## 6. Regole Architetturali Ferree (Critical Warnings)
-* **Nessun Hardcoding:** Soglie di promozione, tempi di decadimento, dimensioni dei chunk vettoriali e chiavi API devono risiedere in un file `config.yaml`.
-* **Concurrency Locks:** Implementare rigorosamente i Lock (`asyncio.Lock()`) per evitare "race conditions" durante le scritture asincrone sui buffer di memoria.
-* **Gestione dei Costi Token:** La separazione tra Familiarity (risposta rapida) e Recollection (risposta profonda) è essenziale per non saturare la context window e abbattere i costi delle API (rif. MemGPT).
+The permanent store. Based on advanced cognitive architectures (ref. CoALA), the permanent database is split into **two distinct vector collections**:
 
-## 7. Riferimenti Accademici
-* MemGPT (Towards LLMs as Operating Systems) (Packer et al.)
-* Cognitive Architectures for Language Agents (CoALA) (Sumers et al.)
-* Reflexion: Language Agents with Verbal Reinforcement Learning (Shinn et al.) & Self-Refine (Madaan et al.)
-* Generative Agents: Interactive Simulacra of Human Behavior (Park et al.)
+- **Semantic Memory (Facts):** Objective data and static user preferences (e.g. *"User uses ESP32"*, *"Server IP is 192.168.1.10"*).
+- **Episodic Memory (Experiences):** Traces of past interactions, decision processes, and historical problem-solving (e.g. *"On 12 May we fixed a capacitive sensor bug by filtering noise with a moving average"*). This is the foundation for not repeating the same mistakes.
+
+### C. GraphDB (Knowledge Graph)
+
+A relational triple store that holds structured, factual knowledge as `(subject → predicate → object)` triples. This is the primary source of truth that the agent injects into its system prompt.
+
+- Triples are normalised (predicate aliasing/canonicalisation) to prevent semantic duplicates.
+- Triples are grouped into **ontological categories** (user identity, user preferences, user experiences) by the Knowledge Renderer.
+- Pre-populated at startup via `seed_truths.yaml` when the graph is empty.
+
+---
+
+## 3. Phase 2: Logic Engines (Async Workers)
+
+> **Directive:** These modules must run independently. `asyncio` is mandatory to avoid blocking the main event loop.
+
+### A. Inference Engine (The Perceiver)
+
+Analyses the user's prompt and the generated response. Generates in the background a structured JSON with new "deductions" to insert into the Short-Term Buffer and the Knowledge Graph.
+
+### B. The Critic (High-Scepticism Validation Engine)
+
+**Function:** When the LLM addresses a topic, the Critic scans the Short-Term Buffer.
+
+**Devil's Advocate Logic** (ref. Reflexion): It must not seek confirmations — it must look for **contradictions**. The Critic's system prompt forces it to find weaknesses in the temporary reasoning through a textual internal debate, not just mathematical scoring.
+
+**Score Update:**
+- If the concept withstands the Critic → `confidence_score += 1`
+- If the concept fails → `confidence_score -= 1`
+
+> **Note:** The Critic is currently disabled for `qwen2.5:3b`, which always returns a negative verdict, blocking Ollama every 15 seconds. With the dual-write architecture, facts go directly to LTM without requiring the Critic. Re-enable with a larger model (e.g. `qwen3:8b` or above).
+
+### C. Garbage Collector & Memory Evolution (Promotion, Linking & Decay)
+
+An async task that loops over the Short-Term Buffer every N minutes.
+
+- **Promotion & Zettelkasten (Link Generation):** If `confidence_score >= PROMOTION_THRESHOLD`, the node is extracted. Before saving to Long-Term Memory, the system runs a vector search to find similar existing nodes and creates linkage metadata. Memories are not isolated — they form a **knowledge graph**.
+- **Decay (Forgetting):** If `(Time.now() - last_access_timestamp) > DECAY_TIME` and `confidence_score < MIN_SCORE`, the node is permanently deleted — implementing the *cognitive vulnerability* principle: making room for better concepts.
+
+---
+
+## 4. Phase 3: The Auto-Correction Loop (Advanced Self-Reflection)
+
+Pure self-correction fails often due to the LLM's confirmation bias. CLAM implements a **Recollection-Familiarity** logic.
+
+- **Familiarity Check:** The LLM evaluates whether the user's request is straightforward. If yes, it retrieves facts from Semantic Memory and issues the response (**Fast Track**).
+- **Recollection:** If the request is complex, it triggers a deep search through Episodic Memory to reconstruct past chains of similar events.
+- **Internal Debate:** Before responding, a secondary LLM call (with an antagonistic role) evaluates the draft for violations of learned rules. If it finds errors, it forces a rewrite.
+
+---
+
+## 5. Phase 4: The CLAM Dashboard (Visual Interface)
+
+A fully decoupled frontend module to observe the agent "thinking" and evolving.
+
+- **Backend (API Bridge):** FastAPI with WebSockets. **HTTP polling is strictly forbidden.** The logic engine sends push updates to the frontend only on memory state changes.
+- **Frontend:** HTML/JavaScript with Vis.js for graph rendering.
+
+**Required Visual Elements:**
+- **Stream of Consciousness:** A scrolling terminal log of Critic and Internal Debate activity.
+- **Bifurcated Memory Dashboard:** Separate counters for Volatile Nodes (STM), Semantic Memory (Facts), Episodic Memory (Experiences), and Knowledge Graph triples.
+- **Zettelkasten Growth Graph:** Interactive node visualisation. Volatile nodes pulse; promoted and linked nodes form visible clusters; decaying nodes fade out.
+
+---
+
+## 6. Knowledge Renderer & Multilanguage Support
+
+The **Knowledge Renderer** is the bridge between the raw database (data structures) and the LLM's context window (natural language). It converts raw triples into a structured, readable document that is injected into the system prompt.
+
+For example, instead of:
+```
+User → has_name → Marcello
+```
+The LLM sees:
+```
+👤 USER PROFILE:
+  Name: Marcello Mangione
+  Age: 60
+```
+
+The renderer supports **5 languages** (Italian, English, German, French, Spanish) via localised category labels and predicate render labels, configurable from the dashboard without restarting the server.
+
+---
+
+## 7. Iron-Clad Architectural Rules (Critical Warnings)
+
+- **No Hardcoding:** Promotion thresholds, decay times, vector chunk sizes, and API keys must reside in `config.yaml`.
+- **Concurrency Locks:** Strictly implement locks (`asyncio.Lock()`) to avoid race conditions during async writes to memory buffers.
+- **Token Cost Management:** The separation between Familiarity (fast response) and Recollection (deep response) is essential to avoid saturating the context window and to reduce API costs (ref. MemGPT).
+
+---
+
+## 8. Academic References
+
+- **MemGPT** — *Towards LLMs as Operating Systems* (Packer et al.)
+- **CoALA** — *Cognitive Architectures for Language Agents* (Sumers et al.)
+- **Reflexion** — *Language Agents with Verbal Reinforcement Learning* (Shinn et al.)
+- **Self-Refine** (Madaan et al.)
+- **Generative Agents** — *Interactive Simulacra of Human Behavior* (Park et al.)
