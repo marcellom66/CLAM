@@ -1,3 +1,5 @@
+<img width="1024" height="559" alt="image" src="https://github.com/user-attachments/assets/5027a565-0739-4896-875b-83e1ebbd1fa2" />
+
 # CLAM — Cognitive Large Application Model
 
 CLAM is an LLM-based agent with a two-tier memory architecture. The goal is **not** to fine-tune the model, but to pair it with a dynamic database system that simulates human cognitive processes: perception, short-term evaluation, validation through confirmation, long-term consolidation, and **memory decay** (forgetting) for unconfirmed information.
